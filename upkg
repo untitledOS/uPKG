@@ -35,6 +35,9 @@ elif op in ["upgrade", "u", "up"]:
     for package in os.listdir(f"/home/{user}/.local/share/untitledOS"):
         print(f"Upgrading package {package}")
         run(["git", "-C", f"/home/{user}/.local/share/untitledOS/{package}", "pull"])
+        run(["cp", f"/home/{user}/.local/share/untitledOS/{package}/{package}", "/usr/bin/"])
+        run(["chmod", "+x", f"/usr/bin/{package}"])
+        run(["cp", f"/home/{user}/.local/share/untitledOS/{package}/{package}.desktop", f"/usr/share/applications/{package}.desktop"])
         print(f"Package {package} upgraded.")
     exit(0)
 elif op in ["install", "i", "remove", "r", "uninstall", "un"]:
