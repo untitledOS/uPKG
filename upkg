@@ -60,6 +60,7 @@ elif op in ["install", "i", "remove", "r", "uninstall", "un"]:
             if copy_command.returncode == 1:
                 exit(1)
             run(["chmod", "+x", f"/usr/bin/{package}"])
+            run(["cp", f"/home/{user}/.local/share/untitledOS/{package}/{package}.desktop", f"/usr/share/applications/{package}.desktop"])
             print(f"Package {package} installed.")
         elif op in ["remove", "r", "uninstall", "un"]:
             user = os.getlogin()
