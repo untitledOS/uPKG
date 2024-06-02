@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+import argparse, os, requests
+from subprocess import run
+
+parser = argparse.ArgumentParser(description='Manage packages')
+parser.add_argument("operation", type=str, help='Operation to perform')
+parser.add_argument("packages", type=str, nargs='*', help='Packages to install or manage')
+args = parser.parse_args()
+
+op = args.operation
+packages = [package.lower() for package in args.packages]
+
+def repo_exists(package):
+    url = f"https://github.com/untitledOS/{package}.git"
+    response = requests.get(url)
+    denylist = ["docs", "upkg"]
+    if response.status_code == 200 and package not in denylist:
+        return True
+
+def package_installed(package):
+    user = os.getlogin()
+    return os.path.exists(f"/home/{user}/.local/share/untitledOS/{package}")
+
+if op in ["list", "ls", "l"]:
+    if len(os.listdir(f"/home/{os.getlogin()}/.local/share/untitledOS")) == 0:
+        print("No packages installed.")
+        exit(0)
+    print("Installed packages:")
+    user = os.getlogin()
+    for package in os.listdir(f"/home/{user}/.local/share/untitledOS"):
+        print(package)
+    exit(0)
+elif op in ["upgrade", "u", "up"]:
+    user = os.getlogin()
+    for package in os.listdir(f"/home/{user}/.local/share/untitledOS"):
+        print(f"Upgrading package {package}")
+        run(["git", "-C", f"/home/{user}/.local/share/untitledOS/{package}", "pull"])
+        print(f"Package {package} upgraded.")
+    exit(0)
+elif op in ["install", "i", "remove", "r", "uninstall", "un"]:
+    if not packages:
+        print("Package name is required for install, remove, and uninstall operations.")
+        exit(1)
+    for package in packages:
+        if op in ["install", "i"]:
+            if not repo_exists(package):
+                print(f"Package {package} does not exist.")
+                continue
+            if package_installed(package):
+                print(f"Package {package} is already installed.")
+                continue
+            print(f"Installing package {package}")
+            user = os.getlogin()
+            run(["mkdir", "-p", f"/home/{user}/.local/share/untitledOS/{package}"])
+            run(["git", "clone", f"https://github.com/untitledOS/{package}.git", f"/home/{user}/.local/share/untitledOS/{package}"])
+            print(f"Package {package} installed.")
+        elif op in ["remove", "r", "uninstall", "un"]:
+            user = os.getlogin()
+            if not package_installed(package):
+                print(f"Package {package} is not installed.")
+            else:
+                run(["rm", "-rf", f"/home/{user}/.local/share/untitledOS/{package}"])
+                print(f"Removed {package}.")
+else:
+    print(f"Operation {op} not supported.")
+    exit(1)
