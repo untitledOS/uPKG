@@ -31,6 +31,9 @@ if op in ["list", "ls", "l"]:
         print(package)
     exit(0)
 elif op in ["upgrade", "u", "up"]:
+    if os.geteuid() != 0:
+        print("uPKG must be run as root. (try sudo upkg)")
+        exit(1)
     user = os.getlogin()
     for package in os.listdir(f"/home/{user}/.local/share/untitledOS"):
         print(f"Upgrading package {package}")
