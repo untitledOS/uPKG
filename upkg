@@ -43,6 +43,30 @@ elif op in ["upgrade", "u", "up"]:
         run(["cp", f"/home/{user}/.local/share/untitledOS/{package}/{package}.desktop", f"/usr/share/applications/{package}.desktop"])
         print(f"Package {package} upgraded.")
     exit(0)
+elif op in ["outdated", "o", "out"]:
+    user = os.getlogin()
+    outdated = []
+    for package in os.listdir(f"/home/{user}/.local/share/untitledOS"):
+        response = run(["git", "-C", f"/home/{user}/.local/share/untitledOS/{package}", "status"], capture_output=True)
+        if "behind" in response.stdout.decode():
+            outdated.append(package)
+    if len(outdated) == 0:
+        print("No outdated packages.")
+        exit(0)
+    print("Outdated packages:")
+    for package in outdated:
+        print(package)
+    exit(0)
+elif op in ["query", "q"]:
+    if not packages:
+        print("Package name is required for query operation.")
+        exit(1)
+    for package in packages:
+        if repo_exists(package):
+            print(f"Package {package} exists\n\nWeb: https://github.com/untitledOS/{package}\nGit: https://github.com/untitledOS/{package}.git")
+        else:
+            print(f"Package {package} does not exist.")
+    exit(0)
 elif op in ["install", "i", "remove", "r", "uninstall", "un"]:
     if os.geteuid() != 0:
         print("uPKG must be run as root. (try sudo upkg)")
