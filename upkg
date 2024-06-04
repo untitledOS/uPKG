@@ -47,7 +47,10 @@ elif op in ["outdated", "o", "out"]:
     user = os.getlogin()
     outdated = []
     for package in os.listdir(f"/home/{user}/.local/share/untitledOS"):
-        response = run(["git", "-C", f"/home/{user}/.local/share/untitledOS/{package}", "status"], capture_output=True)
+        # add as safe directory with git config --global --add safe.directory {repo_path}
+        run(f"git config --global --add safe.directory /home/{user}/.local/share/untitledOS/{package}", shell=True)
+        run(["pkexec", "git", "-C", f"/home/{user}/.local/share/untitledOS/{package}", "fetch"])
+        response = run(["git", "-C", f"/home/{user}/.local/share/untitledOS/{package}", "status"], capture_output=True, shell=True)
         if "behind" in response.stdout.decode():
             outdated.append(package)
     if len(outdated) == 0:
@@ -68,9 +71,6 @@ elif op in ["query", "q"]:
             print(f"Package {package} does not exist.")
     exit(0)
 elif op in ["install", "i", "remove", "r", "uninstall", "un"]:
-    if os.geteuid() != 0:
-        print("uPKG must be run as root. (try sudo upkg)")
-        exit(1)
     if not packages:
         print("Package name is required for install, remove, and uninstall operations.")
         exit(1)
@@ -86,19 +86,30 @@ elif op in ["install", "i", "remove", "r", "uninstall", "un"]:
             user = os.getlogin()
             run(["mkdir", "-p", f"/home/{user}/.local/share/untitledOS/{package}"])
             run(["git", "clone", f"https://github.com/untitledOS/{package}.git", f"/home/{user}/.local/share/untitledOS/{package}"])
-            copy_command = run(["cp", f"/home/{user}/.local/share/untitledOS/{package}/{package}", "/usr/bin/"])
+            if os.geteuid() != 0:
+                copy_command = run(["pkexec", "cp", f"/home/{user}/.local/share/untitledOS/{package}/{package}", "/usr/bin/"])
+            else:
+                copy_command = run(["cp", f"/home/{user}/.local/share/untitledOS/{package}/{package}", "/usr/bin/"])
             if copy_command.returncode == 1:
                 exit(1)
-            run(["chmod", "+x", f"/usr/bin/{package}"])
-            run(["cp", f"/home/{user}/.local/share/untitledOS/{package}/{package}.desktop", f"/usr/share/applications/{package}.desktop"])
+            if os.geteuid() != 0:
+                run(["pkexec", "chmod", "+x", f"/usr/bin/{package}"])
+                run(["pkexec", "cp", f"/home/{user}/.local/share/untitledOS/{package}/{package}.desktop", f"/usr/share/applications/{package}.desktop"])
+            else:
+                run(["chmod", "+x", f"/usr/bin/{package}"])
+                run(["cp", f"/home/{user}/.local/share/untitledOS/{package}/{package}.desktop", f"/usr/share/applications/{package}.desktop"])
             print(f"Package {package} installed.")
         elif op in ["remove", "r", "uninstall", "un"]:
             user = os.getlogin()
             if not package_installed(package):
                 print(f"Package {package} is not installed.")
             else:
-                run(["rm", "-rf", f"/home/{user}/.local/share/untitledOS/{package}"])
-                run(["rm", f"/usr/bin/{package}"])
+                if os.geteuid() != 0:
+                    run(["pkexec", "rm", "-rf", f"/home/{user}/.local/share/untitledOS/{package}"])
+                    run(["pkexec", "rm", f"/usr/bin/{package}"])
+                else:
+                    run(["rm", "-rf", f"/home/{user}/.local/share/untitledOS/{package}"])
+                    run(["rm", f"/usr/bin/{package}"])
                 print(f"Removed {package}.")
 else:
     print(f"Operation {op} not supported.")
